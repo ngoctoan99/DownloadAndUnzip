@@ -11,6 +11,7 @@ import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.PowerManager;
 import android.os.StrictMode;
 import android.util.Log;
@@ -20,6 +21,7 @@ import android.widget.Toast;
 import com.sanghm2.downloadpercent.databinding.ActivityMainBinding;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -218,7 +220,6 @@ public class MainActivity extends AppCompatActivity {
         protected Integer doInBackground(Void... voids) {
             try {
                 ZipFile zip = new ZipFile(_zipFile);
-                mProgressDialog1.setMax(zip.size());
                 FileInputStream fin = new FileInputStream(_zipFile);
                 ZipInputStream zin = new ZipInputStream(new BufferedInputStream(fin));
                 ZipEntry ze = null;
@@ -227,14 +228,33 @@ public class MainActivity extends AppCompatActivity {
                     if (ze.isDirectory()) {
                         _dirChecker(ze.getName());
                     } else {
+                        Log.d("sizefilezip",ze.getSize() +"");
                         // Here I am doing the update of my progress bar
-                        per++;
-                        publishProgress(per / zip.size() * 100);
-
+//                        per++;
+//                        publishProgress(per / zip.size() * 100);
                         FileOutputStream fout = new FileOutputStream(_location + ze.getName());
-                        for (int c = zin.read(); c != -1; c = zin.read()) {
-                            fout.write(c);
+//                        for (int c = zin.read(); c != -1; c = zin.read()) {
+//                            fout.write(c);
+//                        }
+                        /////////////////////////////
+                        byte data[] = new byte[4096];
+                        long total = 0;
+                        int count;
+                        File file = new File(Environment.getExternalStorageDirectory().toString()+"/sample.zip");
+                        long zipLength = file.length();
+                        Log.d("filesizezip",zipLength+"");
+                        while ((count = zin.read(data)) != -1){
+                            if (isCancelled()){
+                                zin.close();
+                                return null;
+                            }
+                            total += count ;
+                            if(zipLength >0)
+                                publishProgress((int) (total * 100 / zipLength));
+                            fout.write(data,0,count);
+                            Log.d("filesizezip",(int) (total * 100 / zipLength)+"");
                         }
+                        /////////////////// new code
                         zin.closeEntry();
                         fout.close();
                     }
@@ -249,6 +269,8 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onProgressUpdate(Integer... values) {
             super.onProgressUpdate(values);
+            mProgressDialog.setIndeterminate(false);
+            mProgressDialog.setMax(100);
             mProgressDialog1.setProgress(values[0]);
         }
 
